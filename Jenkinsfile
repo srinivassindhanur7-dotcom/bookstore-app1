@@ -3,13 +3,7 @@ pipeline {
 
     stages {
 
-        stage('Clone Code') {
-            steps {
-                git 'https://github.com/srinivassindhanur7-dotcom/bookstore-app1.git'
-            }
-        }
-
-        stage('Build') {
+        stage('Build Maven Project') {
             steps {
                 sh 'mvn clean package'
             }
@@ -17,19 +11,35 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t your-dockerhub-username/bookstore-app1 .'
+                sh 'docker build -t shreenivasa/bookstore-app1 .'
             }
         }
 
-        stage('Push Image') {
+        stage('Docker Login') {
             steps {
-                sh 'docker push your-dockerhub-username/bookstore-app1'
+                withCredentials([usernamePassword(
+                    credentialsId: '62179a91-f16e-4975-9cc1-fb0bde159c47',
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
+                    sh 'echo $PASS | docker login -u $USER --password-stdin'
+                }
             }
         }
 
-        stage('Deploy') {
+        stage('Push Docker Image') {
             steps {
-                sh 'docker run -d -p 80:8080 your-dockerhub-username/bookstore-app1'
+                sh 'docker push shreenivasa/bookstore-app1'
+            }
+        }
+
+        stage('Deploy Container') {
+            steps {
+                sh '''
+                docker stop app || true
+                docker rm app || true
+                docker run -d -p 80:8080 --name app shreenivasa/bookstore-app1
+                '''
             }
         }
     }
